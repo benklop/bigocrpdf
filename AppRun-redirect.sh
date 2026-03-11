@@ -88,24 +88,23 @@ export PYTHONSTARTUP="$SITE_PACKAGES/sitecustomize_bigocrpdf.py"
 
 # Determine which command to run
 APPIMAGE_NAME="$(basename "$ARGV0" 2>/dev/null || basename "$0")"
-BIGOCRPDF="$APPDIR/opt/python3.11/bin/bigocrpdf"
-BIGOCRIMAGE="$APPDIR/opt/python3.11/bin/bigocrimage"
+PYTHON_BIN="$APPDIR/opt/python3.11/bin/python3.11"
 
 case "$APPIMAGE_NAME" in
     *bigocrimage*)
-        exec "$BIGOCRIMAGE" "$@"
+        exec "$PYTHON_BIN" -c "from bigocrpdf import main_image; raise SystemExit(main_image())" "$@"
         ;;
     *editor*)
-        exec "$BIGOCRPDF" --edit "$@"
+        exec "$PYTHON_BIN" -m bigocrpdf --edit "$@"
         ;;
     *)
         if [ "$1" = "--edit" ] || [ "$1" = "-e" ]; then
-            exec "$BIGOCRPDF" "$@"
+            exec "$PYTHON_BIN" -m bigocrpdf "$@"
         elif [ "$1" = "--image" ] || [ "$1" = "-i" ]; then
             shift
-            exec "$BIGOCRIMAGE" "$@"
+            exec "$PYTHON_BIN" -c "from bigocrpdf import main_image; raise SystemExit(main_image())" "$@"
         else
-            exec "$BIGOCRPDF" "$@"
+            exec "$PYTHON_BIN" -m bigocrpdf "$@"
         fi
         ;;
 esac
