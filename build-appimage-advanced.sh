@@ -139,8 +139,10 @@ install_app() {
     
     info "Installing openvino..."
     "$APPDIR/opt/python3.11/bin/pip3.11" install --no-cache-dir \
-        'openvino>=2023.0.0' \
-        openvino-dev
+        'openvino>=2023.0.0'
+
+    info "Validating Python dependency graph..."
+    "$APPDIR/opt/python3.11/bin/pip3.11" check
     
     # Create sitecustomize.py to redirect RapidOCR models path
     info "Creating sitecustomize.py for RapidOCR path redirection..."
