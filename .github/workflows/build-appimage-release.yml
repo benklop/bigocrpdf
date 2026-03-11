@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
@@ -23,6 +23,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y \
             python3 \
@@ -33,7 +34,8 @@ jobs:
             desktop-file-utils \
             pkg-config \
             libcairo2-dev \
-            libgirepository1.0-dev
+            gobject-introspection \
+            libgirepository-2.0-dev
 
       - name: Build AppImage
         env:

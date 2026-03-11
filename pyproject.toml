@@ -22,8 +22,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    # 3.56+ requires girepository-2.0, which is unavailable on Ubuntu 22.04 CI image.
-    "PyGObject>=3.42.0,<3.56",
+    "PyGObject>=3.42.0",
     "pycairo>=1.20.0",
     # RapidOCR engine
     "rapidocr>=3.5.0",

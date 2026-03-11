@@ -49,9 +49,13 @@ check_prerequisites() {
         error "Cairo development libraries not found. Install libcairo2-dev (Debian/Ubuntu) or cairo-devel (Fedora/RHEL)"
     fi
     
-    # Check for GObject Introspection
-    if ! pkg-config --exists gobject-introspection-1.0; then
-        warn "GObject Introspection development files not found. Install libgirepository1.0-dev (Debian/Ubuntu) or gobject-introspection-devel (Fedora/RHEL)"
+    # PyGObject on newer distros expects girepository-2.0; older distros expose gobject-introspection-1.0.
+    if pkg-config --exists girepository-2.0; then
+        :
+    elif pkg-config --exists gobject-introspection-1.0; then
+        :
+    else
+        error "GObject Introspection development files not found. Install libgirepository-2.0-dev (Ubuntu 24.04+) or libgirepository1.0-dev (older Debian/Ubuntu)"
     fi
     
     info "Prerequisites OK"
