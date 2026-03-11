@@ -420,7 +420,7 @@ build_appimage() {
     export ARCH=x86_64
     
     # Run appimagetool
-    ./tools/appimagetool-x86_64.AppImage \
+    ./tools/appimagetool-x86_64.AppImage --appimage-extract-and-run \
         --no-appstream \
         "$APPDIR" \
         "BigOcrPDF-${APP_VERSION}-x86_64.AppImage"
