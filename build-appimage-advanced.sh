@@ -342,6 +342,13 @@ setup_desktop_integration() {
     mkdir -p "$APPDIR/usr/share/applications"
     mkdir -p "$APPDIR/usr/share/icons/hicolor/scalable/apps"
     mkdir -p "$APPDIR/usr/share/metainfo"
+
+    # python-appimage ships a default desktop entry/icon; remove them so
+    # AppImage integration uses BigOcrPDF metadata instead.
+    rm -f "$APPDIR"/*.desktop
+    rm -f "$APPDIR"/python*.desktop
+    rm -f "$APPDIR"/python*.png
+    rm -f "$APPDIR/usr/share/applications"/python*.desktop
     
     # Copy desktop files
     cp "$SCRIPT_DIR/usr/share/applications/"*.desktop "$APPDIR/usr/share/applications/"
