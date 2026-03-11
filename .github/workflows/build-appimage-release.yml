@@ -1,0 +1,59 @@
+name: Build and Publish AppImage
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: appimage-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 \
+            python3-pip \
+            python3-dev \
+            wget \
+            patchelf \
+            desktop-file-utils \
+            pkg-config \
+            libcairo2-dev \
+            libgirepository1.0-dev
+
+      - name: Build AppImage
+        env:
+          APP_VERSION: ${{ github.ref_name }}
+        run: |
+          APP_VERSION_CLEAN="${APP_VERSION#v}"
+          chmod +x ./build-appimage-advanced.sh
+          APP_VERSION="$APP_VERSION_CLEAN" ./build-appimage-advanced.sh
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bigocrpdf-appimage-${{ github.ref_name }}
+          path: dist/*.AppImage
+          if-no-files-found: error
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/*.AppImage
+          fail_on_unmatched_files: true
+          generate_release_notes: true

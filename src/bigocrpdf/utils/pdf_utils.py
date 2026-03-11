@@ -8,6 +8,7 @@ Centralizes PDF-related functionality to avoid code duplication.
 import glob
 import os
 import subprocess
+from collections.abc import Callable
 from typing import Any
 
 # Note: pdftoppm is no longer used. PDF rendering uses Poppler GI library directly.
@@ -324,7 +325,11 @@ def is_image_file(file_path: str) -> bool:
     return file_path.lower().endswith(IMAGE_EXTENSIONS)
 
 
-def images_to_pdf(image_paths: list[str], output_path: str | None = None) -> str:
+def images_to_pdf(
+    image_paths: list[str],
+    output_path: str | None = None,
+    progress_callback: Callable[[int, int, str], None] | None = None,
+) -> str:
     """Convert one or more images to a single PDF file.
 
     Uses Pillow to convert images, applying EXIF rotation and converting
@@ -333,6 +338,7 @@ def images_to_pdf(image_paths: list[str], output_path: str | None = None) -> str
     Args:
         image_paths: List of image file paths to convert
         output_path: Optional output path. If None, a temp file in /tmp is created.
+        progress_callback: Optional callback receiving (current, total, message)
 
     Returns:
         Path to the created PDF file
@@ -347,6 +353,8 @@ def images_to_pdf(image_paths: list[str], output_path: str | None = None) -> str
         raise ValueError("No image paths provided")
 
     images: list[Image.Image] = []
+    total_steps = len(image_paths) + 1
+
     for path in image_paths:
         try:
             img = Image.open(path)
@@ -356,6 +364,12 @@ def images_to_pdf(image_paths: list[str], output_path: str | None = None) -> str
             elif img.mode != "RGB":
                 img = img.convert("RGB")
             images.append(img)
+            if progress_callback:
+                progress_callback(
+                    len(images),
+                    total_steps,
+                    f"Loaded image {len(images)}/{len(image_paths)}",
+                )
         except Exception as e:
             logger.error(f"Failed to open image {path}: {e}")
 
@@ -376,6 +390,8 @@ def images_to_pdf(image_paths: list[str], output_path: str | None = None) -> str
         first_img = images[0]
         rest = images[1:] if len(images) > 1 else []
         first_img.save(output_path, format="PDF", save_all=True, append_images=rest)
+        if progress_callback:
+            progress_callback(total_steps, total_steps, "PDF created")
         logger.info(f"Created PDF from {len(images)} image(s): {output_path}")
         return output_path
     except Exception as e:

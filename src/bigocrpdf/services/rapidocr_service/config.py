@@ -5,12 +5,14 @@ This module contains configuration dataclasses and result types
 for the RapidOCR integration.
 """
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 # Constants for model paths (BigLinux standard)
-DEFAULT_MODEL_PATH = Path("/usr/share/rapidocr/models")
-DEFAULT_FONT_PATH = Path("/usr/share/rapidocr/fonts")
+# Support environment variable override for AppImage portability
+DEFAULT_MODEL_PATH = Path(os.environ.get('RAPIDOCR_MODEL_PATH', '/usr/share/rapidocr/models'))
+DEFAULT_FONT_PATH = Path(os.environ.get('RAPIDOCR_FONT_PATH', '/usr/share/rapidocr/fonts'))
 
 # --- OCR Processing Defaults (single source of truth) ---
 # Used by OCRConfig, PreprocessingConfig and OcrSettings to avoid drift.

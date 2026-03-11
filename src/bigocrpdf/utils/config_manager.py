@@ -38,7 +38,9 @@ DEFAULT_CONFIG: Final[dict[str, Any]] = {
         "height": 600,
     },
     "ocr": {
-        # "language" intentionally omitted to allow automatic detection
+        # Empty string keeps config shape stable while still allowing
+        # runtime auto-detection in settings loader.
+        "language": "",
         "quality": "normal",
         "alignment": "alignrotate",
     },

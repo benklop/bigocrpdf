@@ -9,6 +9,8 @@ import locale
 import os
 import sys
 
+from bigocrpdf.version import VERSION
+
 # Handle direct execution from source directory
 if __package__ is None:
     import pathlib
@@ -18,7 +20,7 @@ if __package__ is None:
         sys.path.insert(0, str(parent_dir))
     __package__ = "bigocrpdf"
 
-__version__ = "3.0.0"
+__version__ = VERSION
 __author__ = "BigLinux Team"
 __license__ = "GPL-3.0"
 
@@ -64,6 +66,47 @@ def _get_install_cmd(package: str) -> str:
     return f"pip install {package}"
 
 
+def _setup_rapidocr_models_dir() -> None:
+    """Configure RapidOCR to use a writable model cache directory.
+
+    AppImage mounts site-packages as read-only, but RapidOCR 3.x defaults model
+    downloads to its package-local ``rapidocr/models`` directory. We force its
+    internal default model path to an XDG cache location.
+    """
+    from pathlib import Path
+
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+    models_cache = cache_home / "bigocrpdf" / "rapidocr" / "models"
+    models_cache.mkdir(parents=True, exist_ok=True)
+
+    # Keep app-level config/env behavior aligned with runtime patching.
+    os.environ["RAPIDOCR_MODEL_PATH"] = str(models_cache)
+    os.environ.setdefault("RAPIDOCR_FONT_PATH", str(models_cache))
+
+    try:
+        from rapidocr.inference_engine.base import InferSession
+
+        InferSession.DEFAULT_MODEL_PATH = models_cache
+
+        # Older/language-specific paths can also point to package-local models.
+        try:
+            import rapidocr.ch_ppocr_rec.main as rec_main
+
+            rec_main.DEFAULT_MODEL_PATH = models_cache
+            rec_main.DEFAULT_DICT_PATH = models_cache / rec_main.DEFAULT_DICT_PATH.name
+        except Exception:
+            pass
+
+        try:
+            import rapidocr.utils.vis_res as vis_res
+
+            vis_res.DEFAULT_FONT_DIR = models_cache
+        except Exception:
+            pass
+    except Exception as e:
+        print(f"Warning: Could not setup RapidOCR models directory: {e}", file=sys.stderr)
+
+
 def _check_ocr_dependencies() -> tuple[bool, str]:
     """Check if OCR dependencies are available and compatible.
 
@@ -72,6 +115,9 @@ def _check_ocr_dependencies() -> tuple[bool, str]:
     """
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
+    # Setup writable models directory before importing rapidocr
+    _setup_rapidocr_models_dir()
+    
     # Try to import rapidocr
     try:
         from rapidocr import RapidOCR  # noqa: F401

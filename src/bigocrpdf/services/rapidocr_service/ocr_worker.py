@@ -31,6 +31,41 @@ from bigocrpdf.utils.python_compat import (
 # Setup Python version compatibility moved to main() to avoid output pollution
 
 
+def _setup_rapidocr_models_dir() -> Path:
+    """Ensure RapidOCR writes models to a writable cache directory."""
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+    models_cache = cache_home / "bigocrpdf" / "rapidocr" / "models"
+    models_cache.mkdir(parents=True, exist_ok=True)
+
+    os.environ["RAPIDOCR_MODEL_PATH"] = str(models_cache)
+    os.environ.setdefault("RAPIDOCR_FONT_PATH", str(models_cache))
+
+    try:
+        from rapidocr.inference_engine.base import InferSession
+
+        InferSession.DEFAULT_MODEL_PATH = models_cache
+
+        try:
+            import rapidocr.ch_ppocr_rec.main as rec_main
+
+            rec_main.DEFAULT_MODEL_PATH = models_cache
+            rec_main.DEFAULT_DICT_PATH = models_cache / rec_main.DEFAULT_DICT_PATH.name
+        except Exception:
+            pass
+
+        try:
+            import rapidocr.utils.vis_res as vis_res
+
+            vis_res.DEFAULT_FONT_DIR = models_cache
+        except Exception:
+            pass
+    except Exception:
+        # Keep OCR worker resilient even if rapidocr internals differ.
+        pass
+
+    return models_cache
+
+
 def run_ocr_batch(
     image_paths: list, language: str, limit_side_len: int, use_openvino: bool = True
 ) -> list:
@@ -46,6 +81,8 @@ def run_ocr_batch(
         EngineType, LangRec, RapidOCR = get_module_from_attribute(
             "rapidocr", "EngineType", "LangRec", "RapidOCR"
         )
+
+    _setup_rapidocr_models_dir()
 
     # Map language string to enum
     lang_map = {
@@ -160,6 +197,8 @@ def run_ocr_full(
             )
             OCRVersion = get_module_from_attribute("rapidocr", "OCRVersion")[0]
 
+        _setup_rapidocr_models_dir()
+
         # Map language string to enum
         lang_map = {
             "latin": LangRec.LATIN,
@@ -273,6 +312,8 @@ def _create_ocr_engine(
             "rapidocr", "EngineType", "LangRec", "RapidOCR"
         )
         OCRVersion = get_module_from_attribute("rapidocr", "OCRVersion")[0]
+
+    _setup_rapidocr_models_dir()
 
     lang_map = {
         "latin": LangRec.LATIN,

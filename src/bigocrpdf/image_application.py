@@ -13,13 +13,14 @@ from gi.repository import Adw, Gio, GLib, Gtk
 
 from bigocrpdf.ui.image_ocr_window import ImageOcrWindow
 from bigocrpdf.ui.widgets import load_css
+from bigocrpdf.version import VERSION
 from bigocrpdf.utils.i18n import _
 from bigocrpdf.utils.logger import logger
 
 # Constants for the standalone image app (avoid circular import from config)
 IMAGE_APP_ID = "br.com.biglinux.bigocrimage"
 IMAGE_APP_ICON = "bigocrimage"
-IMAGE_APP_VERSION = "3.0.0"
+IMAGE_APP_VERSION = VERSION
 
 
 class ImageOcrApp(Adw.Application):

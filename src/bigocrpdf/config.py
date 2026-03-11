@@ -12,6 +12,7 @@ import sys
 from typing import Final
 
 # Import gettext for translatable strings (lazy import to avoid circular)
+from bigocrpdf.version import VERSION
 from bigocrpdf.utils.i18n import _
 
 # ============================================================================
@@ -21,7 +22,7 @@ from bigocrpdf.utils.i18n import _
 APP_NAME: Final[str] = "Big OCR PDF"
 APP_ID: Final[str] = "br.com.biglinux.bigocrpdf"
 IMAGE_APP_ID: Final[str] = "br.com.biglinux.bigocrimage"
-APP_VERSION: Final[str] = "3.0.0"
+APP_VERSION: Final[str] = VERSION
 APP_DESCRIPTION_KEY: Final[str] = "Add OCR to your PDF documents to make them searchable"
 APP_WEBSITE: Final[str] = "https://www.biglinux.com.br"
 APP_ISSUES: Final[str] = "https://github.com/biglinux/bigocrpdf/issues"

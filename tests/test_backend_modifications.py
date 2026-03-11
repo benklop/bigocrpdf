@@ -25,7 +25,6 @@ reportlab.lib.pagesizes.A4 = (595.27, 841.89)  # A4 size in points
 
 # Save originals before mocking
 _MOCKED_MODULES = [
-    "PIL",
     "reportlab",
     "reportlab.lib",
     "reportlab.lib.pagesizes",
@@ -35,7 +34,6 @@ _MOCKED_MODULES = [
 ]
 _saved_modules = {m: sys.modules.get(m) for m in _MOCKED_MODULES}
 
-sys.modules["PIL"] = MagicMock()
 sys.modules["reportlab"] = reportlab
 sys.modules["reportlab.lib"] = reportlab.lib
 sys.modules["reportlab.lib.pagesizes"] = reportlab.lib.pagesizes
@@ -115,10 +113,41 @@ class TestBackendModifications(unittest.TestCase):
                 "bigocrpdf.services.rapidocr_service.backend_pipeline.extract_page_rotations",
                 return_value=original_rotations,
             ),
+            patch.object(self.backend, "_run_chunked_ocr_pipeline") as mock_chunked,
             patch(
                 "bigocrpdf.services.rapidocr_service.backend_pipeline.apply_final_rotation_to_pdf",
             ) as mock_apply_final,
         ):
+            def _fake_chunked(
+                input_pdf,
+                _text_layer_pdf,
+                images_dir,
+                ctx,
+                _pipe_cfg,
+                _res_profile,
+                stats,
+                _progress_callback,
+            ):
+                total_pages = ctx["total_pages"]
+                chunk_images = self.backend.extractor.extract(
+                    input_pdf,
+                    output_dir=images_dir,
+                    page_range=(1, total_pages),
+                    skip_pages={2},
+                )
+
+                # Simulate pipeline page handling without invoking OCR subprocesses.
+                for page_num in range(1, total_pages + 1):
+                    img_path = None if page_num == 2 else chunk_images[page_num - 1]
+                    work_item = {"page_num": page_num, "img_path": img_path}
+                    self.backend._process_page_result(
+                        MagicMock(), {}, work_item, [], page_num, stats
+                    )
+
+                self.backend._page_standalone_flags = [False] * total_pages
+                self.backend._page_original_encodings = {}
+
+            mock_chunked.side_effect = _fake_chunked
             self.backend._process_image_only_pdf(input_pdf, output_pdf)
 
         # Verify extractor was called (chunked extraction)

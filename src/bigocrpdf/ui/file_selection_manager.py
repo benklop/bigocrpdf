@@ -15,7 +15,7 @@ from gi.repository import Gio, Gtk
 
 from bigocrpdf.utils.i18n import _
 from bigocrpdf.utils.logger import logger
-from bigocrpdf.utils.pdf_utils import images_to_pdf, is_image_file
+from bigocrpdf.utils.pdf_utils import is_image_file
 
 if TYPE_CHECKING:
     from window import BigOcrPdfWindow
@@ -163,19 +163,22 @@ class FileSelectionManager:
             # Show merge dialog for images
             self._show_image_merge_dialog(image_files)
         else:
-            # Single image or only PDFs or mix with ≤1 image — convert images to PDF and add
-            converted_paths = list(pdf_files)
-            for img_path in image_files:
-                try:
-                    pdf_path = images_to_pdf([img_path])
-                    converted_paths.append(pdf_path)
-                    # Track original path for output naming
-                    self.settings.original_file_paths[pdf_path] = img_path
-                except Exception as e:
-                    logger.error(f"Failed to convert image to PDF: {e}")
+            # Add regular PDFs immediately.
+            added_pdfs = self.settings.add_files(pdf_files) if pdf_files else 0
 
-            added = self.settings.add_files(converted_paths)
-            if added > 0:
+            if image_files:
+                if added_pdfs > 0:
+                    self.window.update_file_info()
+                self.window.ui.dialogs_manager.convert_images_for_import(
+                    image_files,
+                    self.settings,
+                    merge=False,
+                    on_complete=lambda: self.window.update_file_info(),
+                    error_toast=_("Error converting images"),
+                )
+                return
+
+            if added_pdfs > 0:
                 self.window.update_file_info()
             else:
                 logger.warning(_("No valid files were selected"))
