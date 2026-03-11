@@ -9,9 +9,6 @@ on:
         required: false
         default: false
 
-  push:
-    branches: [ "*" ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
