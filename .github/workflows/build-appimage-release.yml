@@ -43,6 +43,22 @@ jobs:
           chmod +x ./build-appimage-advanced.sh
           APP_VERSION="$APP_VERSION_CLEAN" ./build-appimage-advanced.sh
 
+      - name: Verify AppImage output
+        run: |
+          set -euo pipefail
+          ls -lah dist || true
+          shopt -s nullglob
+          files=(dist/*.AppImage)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No AppImage produced in dist/."
+            exit 1
+          fi
+          printf 'Found AppImage artifacts:\n'
+          printf ' - %s\n' "${files[@]}"
+          for file in "${files[@]}"; do
+            test -f "$file"
+          done
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:

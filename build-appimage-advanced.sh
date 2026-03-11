@@ -131,11 +131,11 @@ install_app() {
     # Install OCR runtime dependencies
     info "Installing onnxruntime..."
     "$APPDIR/opt/python3.11/bin/pip3.11" install --no-cache-dir \
-        onnxruntime>=1.16.0
+        'onnxruntime>=1.16.0'
     
     info "Installing openvino..."
     "$APPDIR/opt/python3.11/bin/pip3.11" install --no-cache-dir \
-        openvino>=2023.0.0 \
+        'openvino>=2023.0.0' \
         openvino-dev
     
     # Create sitecustomize.py to redirect RapidOCR models path
