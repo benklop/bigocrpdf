@@ -194,10 +194,45 @@ bundle_system_libs() {
     mkdir -p "$APPDIR/usr/lib"
     mkdir -p "$APPDIR/usr/share/glib-2.0/schemas"
     
-    # List of libraries to bundle (if available)
+    _copy_library_by_name() {
+        local lib_name="$1"
+        local lib_path
+
+        lib_path=$(ldconfig -p | awk -v lib="$lib_name" '$1 == lib { print $NF; exit }')
+        if [ -z "$lib_path" ] || [ ! -f "$lib_path" ]; then
+            warn "  Library $lib_name not found on system"
+            return 1
+        fi
+
+        info "  Copying $lib_name..."
+        cp -L "$lib_path" "$APPDIR/usr/lib/" 2>/dev/null || warn "  Could not copy $lib_name"
+        return 0
+    }
+
+    _copy_first_available() {
+        local copied=1
+        local lib_name
+
+        for lib_name in "$@"; do
+            if _copy_library_by_name "$lib_name"; then
+                copied=0
+                break
+            fi
+        done
+
+        return $copied
+    }
+
+    # Keep this list intentionally narrow: only UI stack libs that are commonly
+    # missing on older systems and required for startup.
     LIBS=(
         "libgtk-4.so.1"
         "libadwaita-1.so.0"
+        "libgstreamer-1.0.so.0"
+        "libgstbase-1.0.so.0"
+        "libgstvideo-1.0.so.0"
+        "libgstaudio-1.0.so.0"
+        "libgstpbutils-1.0.so.0"
         "libcairo.so.2"
         "libcairo-gobject.so.2"
         "libpango-1.0.so.0"
@@ -211,15 +246,19 @@ bundle_system_libs() {
     )
     
     for lib in "${LIBS[@]}"; do
-        # Find library path
-        LIB_PATH=$(ldconfig -p | grep "$lib" | awk '{print $NF}' | head -1)
-        if [ -n "$LIB_PATH" ] && [ -f "$LIB_PATH" ]; then
-            info "  Copying $lib..."
-            cp -L "$LIB_PATH" "$APPDIR/usr/lib/" 2>/dev/null || warn "  Could not copy $lib"
-        else
-            warn "  Library $lib not found on system"
-        fi
+        _copy_library_by_name "$lib" || true
     done
+
+    # Add image codec libs used by gdk-pixbuf without recursively bundling
+    # low-level system libraries (zlib, selinux, blkid, etc.).
+    _copy_first_available "libjpeg.so.8" "libjpeg.so.62" || warn "  No compatible libjpeg found"
+    _copy_library_by_name "libglycin-2.so.0" || true
+    _copy_library_by_name "libpng16.so.16" || true
+    _copy_library_by_name "libtiff.so.6" || true
+    _copy_library_by_name "libwebp.so.7" || true
+    _copy_library_by_name "libjbig.so.0" || true
+    _copy_library_by_name "libopenjp2.so.7" || true
+    _copy_library_by_name "liblcms2.so.2" || true
     
     # Copy GSettings schemas if available
     if [ -d "/usr/share/glib-2.0/schemas" ]; then
@@ -230,7 +269,7 @@ bundle_system_libs() {
         fi
     fi
     
-    info "System libraries bundled (some may require system installation)"
+    info "System libraries bundled (targeted set only)"
 }
 
 # Create custom AppRun
