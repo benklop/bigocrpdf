@@ -1,6 +1,18 @@
 """Regression tests for GTK status markup escaping in terminal page."""
 
-from bigocrpdf.ui.terminal_page import TerminalPageManager
+import pytest
+
+try:
+    import gi  # noqa: F401
+
+    _HAS_GI = True
+except ModuleNotFoundError:
+    _HAS_GI = False
+
+if _HAS_GI:
+    from bigocrpdf.ui.terminal_page import TerminalPageManager
+else:
+    TerminalPageManager = object  # type: ignore[assignment,misc]
 
 
 class _DummyProgressState:
@@ -35,6 +47,9 @@ def _build_manager() -> TerminalPageManager:
 
 
 def test_processing_status_escapes_pdf_filename_and_status() -> None:
+    if not _HAS_GI:
+        pytest.skip("gi not available")
+
     mgr = _build_manager()
 
     mgr._show_processing_status(
@@ -53,6 +68,9 @@ def test_processing_status_escapes_pdf_filename_and_status() -> None:
 
 
 def test_processing_status_escapes_image_filename_and_time() -> None:
+    if not _HAS_GI:
+        pytest.skip("gi not available")
+
     mgr = _build_manager()
 
     mgr._show_processing_status(
@@ -71,6 +89,9 @@ def test_processing_status_escapes_image_filename_and_time() -> None:
 
 
 def test_completion_and_plain_status_paths_are_safe() -> None:
+    if not _HAS_GI:
+        pytest.skip("gi not available")
+
     mgr = _build_manager()
 
     mgr._show_completion_status(2, "5m & 0s")
