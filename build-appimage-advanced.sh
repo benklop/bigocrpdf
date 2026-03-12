@@ -236,6 +236,7 @@ bundle_system_libs() {
         "libcairo.so.2"
         "libcairo-gobject.so.2"
         "libpango-1.0.so.0"
+        "libpangoft2-1.0.so.0"
         "libpangocairo-1.0.so.0"
         "libgdk_pixbuf-2.0.so.0"
         "libgio-2.0.so.0"
@@ -243,6 +244,12 @@ bundle_system_libs() {
         "libgobject-2.0.so.0"
         "libgmodule-2.0.so.0"
         "libgraphene-1.0.so.0"
+        "libharfbuzz.so.0"
+        "libfreetype.so.6"
+        "libfontconfig.so.1"
+        "libfribidi.so.0"
+        "libthai.so.0"
+        "libdatrie.so.1"
     )
     
     for lib in "${LIBS[@]}"; do
