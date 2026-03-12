@@ -6,15 +6,21 @@ and fonts installed on the system.
 """
 
 import logging
+import os
 from pathlib import Path
 
 from bigocrpdf.utils.i18n import _
 
 logger = logging.getLogger(__name__)
 
-# Default paths for BigLinux
-DEFAULT_MODEL_PATH = Path("/usr/share/rapidocr/models")
-DEFAULT_FONT_PATH = Path("/usr/share/rapidocr/fonts")
+# Default paths — honour env var overrides for AppImage portability
+# (same logic as config.py)
+DEFAULT_MODEL_PATH = Path(
+    os.environ.get("RAPIDOCR_MODEL_PATH", "/usr/share/rapidocr/models")
+)
+DEFAULT_FONT_PATH = Path(
+    os.environ.get("RAPIDOCR_FONT_PATH", "/usr/share/rapidocr/fonts")
+)
 
 
 class ModelDiscovery:

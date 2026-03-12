@@ -56,8 +56,11 @@ class WindowUISetupMixin:
 
         # Create master ViewStack for main view and other pages
         self.main_stack = Adw.ViewStack()
-        self.main_stack.set_enable_transitions(True)
-        self.main_stack.set_transition_duration(_VIEWSTACK_TRANSITION_MS)
+        # set_enable_transitions and set_transition_duration require libadwaita >= 1.6
+        if hasattr(self.main_stack, 'set_enable_transitions'):
+            self.main_stack.set_enable_transitions(True)
+        if hasattr(self.main_stack, 'set_transition_duration'):
+            self.main_stack.set_transition_duration(_VIEWSTACK_TRANSITION_MS)
 
         # Add split_view as primary view
         self.main_stack.add_titled(self.split_view, "main_view", _("Main"))
@@ -186,7 +189,8 @@ class WindowUISetupMixin:
         # Create stack for right content (file queue only for now)
         self.stack = Adw.ViewStack()
         self.stack.set_vexpand(True)
-        self.stack.set_transition_duration(_VIEWSTACK_TRANSITION_MS)
+        if hasattr(self.stack, 'set_transition_duration'):
+            self.stack.set_transition_duration(_VIEWSTACK_TRANSITION_MS)
 
         # Content scroll for the file queue
         content_scroll = Gtk.ScrolledWindow()

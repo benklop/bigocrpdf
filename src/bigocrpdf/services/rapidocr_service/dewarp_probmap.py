@@ -40,7 +40,9 @@ Architecture:
 """
 
 import logging
+import os
 import threading
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -51,7 +53,26 @@ logger = logging.getLogger(__name__)
 
 # ── Constants ──────────────────────────────────────────────────────
 
-_DBNET_MODEL_PATH = "/usr/share/rapidocr/models/ch_PP-OCRv5_mobile_det.onnx"
+_DBNET_MODEL_FILENAME = "ch_PP-OCRv5_mobile_det.onnx"
+_DBNET_SYSTEM_MODEL_PATH = Path("/usr/share/rapidocr/models")
+
+
+def _resolve_dbnet_model_path() -> Path:
+    """Return the DBNet detection model path, honouring RAPIDOCR_MODEL_PATH."""
+    env_path = os.environ.get("RAPIDOCR_MODEL_PATH")
+    candidates = []
+    if env_path:
+        candidates.append(Path(env_path) / _DBNET_MODEL_FILENAME)
+    candidates.append(_DBNET_SYSTEM_MODEL_PATH / _DBNET_MODEL_FILENAME)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    # Return the env-based or system path even if missing, so the error
+    # message from OpenVINO names the most-relevant location.
+    fallback = _DBNET_SYSTEM_MODEL_PATH / _DBNET_MODEL_FILENAME
+    return candidates[0] if candidates else fallback
+
+
 _DBNET_MAX_SIDE = 1536
 _DBNET_PROB_THRESHOLD = 0.3
 
@@ -106,6 +127,74 @@ _INFERENCE_ALIGN_STRIDE = 32  # resize dimensions must be multiples of this
 _ov_model = None
 _ov_lock = threading.Lock()
 
+# Fallback download URL — kept in sync with RapidOCR's default_models.yaml.
+# The runtime lookup in _ensure_dbnet_model() prefers the YAML value so it
+# stays current across RapidOCR upgrades without a code change here.
+_DBNET_FALLBACK_URL = (
+    "https://www.modelscope.cn/models/RapidAI/RapidOCR"
+    "/resolve/v3.7.0/onnx/PP-OCRv5/det/ch_PP-OCRv5_mobile_det.onnx"
+)
+
+
+def _get_dbnet_download_url() -> str:
+    """Return the download URL for the DBNet model from RapidOCR's YAML."""
+    try:
+        import yaml
+        import rapidocr
+
+        yaml_path = (
+            Path(rapidocr.__file__).parent
+            / "default_models.yaml"
+        )
+        with open(yaml_path) as fh:
+            cfg = yaml.safe_load(fh)
+
+        def _search(node, target):
+            if isinstance(node, dict):
+                for k, v in node.items():
+                    if k == target and isinstance(v, dict):
+                        url = v.get("model_dir", "")
+                        if url.endswith(".onnx"):
+                            return url
+                    result = _search(v, target)
+                    if result:
+                        return result
+            return None
+
+        url = _search(cfg, _DBNET_MODEL_FILENAME)
+        return url or _DBNET_FALLBACK_URL
+    except Exception:
+        return _DBNET_FALLBACK_URL
+
+
+def _ensure_dbnet_model(model_path: Path) -> None:
+    """Download the DBNet model to *model_path* if it is not present."""
+    if model_path.exists():
+        return
+
+    url = _get_dbnet_download_url()
+    logger.info(
+        "DBNet model not found at %s — downloading from %s", model_path, url
+    )
+    try:
+        from rapidocr.utils.download_file import (
+            DownloadFile,
+            DownloadFileInput,
+        )
+
+        DownloadFile.run(
+            DownloadFileInput(
+                file_url=url,
+                save_path=model_path,
+                logger=logger,
+                verbose=True,
+            )
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"Could not download DBNet model from {url}: {exc}"
+        ) from exc
+
 
 def _get_model():
     """Lazily load and compile the DBNet model via OpenVINO.
@@ -129,11 +218,16 @@ def _get_model():
         try:
             import openvino as ov
 
+            model_path = _resolve_dbnet_model_path()
+            _ensure_dbnet_model(model_path)
             core = ov.Core()
-            _ov_model = core.compile_model(_DBNET_MODEL_PATH, "CPU")
+            _ov_model = core.compile_model(str(model_path), "CPU")
             logger.debug("DBNet model loaded via OpenVINO for probmap dewarp")
         except Exception as exc:
-            raise RuntimeError(f"Failed to load DBNet model at {_DBNET_MODEL_PATH}: {exc}") from exc
+            model_path = _resolve_dbnet_model_path()
+            raise RuntimeError(
+                f"Failed to load DBNet model at {model_path}: {exc}"
+            ) from exc
     return _ov_model
 
 

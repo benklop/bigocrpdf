@@ -512,7 +512,8 @@ class PDFEditorWindow(EditorToolsMixin, EditorPageActionsMixin, Adw.Window):
         content.append(icon)
 
         title = Gtk.Label()
-        title.set_markup(f"<span size='large' weight='bold'>{_('PDF Editor')}</span>")
+        title_text = GLib.markup_escape_text(_("PDF Editor"), -1)
+        title.set_markup(f"<span size='large' weight='bold'>{title_text}</span>")
         title.set_halign(Gtk.Align.CENTER)
         title.set_margin_bottom(14)
         content.append(title)
@@ -533,7 +534,8 @@ class PDFEditorWindow(EditorToolsMixin, EditorPageActionsMixin, Adw.Window):
         content.append(desc)
 
         shortcuts_label = Gtk.Label()
-        shortcuts_label.set_markup("<span weight='bold'>" + _("Keyboard shortcuts:") + "</span>")
+        shortcuts_text = GLib.markup_escape_text(_("Keyboard shortcuts:"), -1)
+        shortcuts_label.set_markup("<span weight='bold'>" + shortcuts_text + "</span>")
         shortcuts_label.set_halign(Gtk.Align.START)
         shortcuts_label.set_margin_bottom(8)
         content.append(shortcuts_label)
@@ -552,7 +554,7 @@ class PDFEditorWindow(EditorToolsMixin, EditorPageActionsMixin, Adw.Window):
         for key, action in shortcuts:
             row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             key_label = Gtk.Label()
-            key_label.set_markup(f"<tt>{key}</tt>")
+            key_label.set_markup(f"<tt>{GLib.markup_escape_text(key, -1)}</tt>")
             key_label.set_xalign(0)
             key_label.set_size_request(140, -1)
             row.append(key_label)
@@ -563,7 +565,8 @@ class PDFEditorWindow(EditorToolsMixin, EditorPageActionsMixin, Adw.Window):
         content.append(shortcuts_box)
 
         tips_label = Gtk.Label()
-        tips_label.set_markup("<span weight='bold'>" + _("Tips:") + "</span>")
+        tips_text = GLib.markup_escape_text(_("Tips:"), -1)
+        tips_label.set_markup("<span weight='bold'>" + tips_text + "</span>")
         tips_label.set_halign(Gtk.Align.START)
         tips_label.set_margin_bottom(8)
         content.append(tips_label)
@@ -577,7 +580,7 @@ class PDFEditorWindow(EditorToolsMixin, EditorPageActionsMixin, Adw.Window):
         ]
         for tip in tip_items:
             lbl = Gtk.Label()
-            lbl.set_markup(f"• {tip}")
+            lbl.set_text(f"• {tip}")
             lbl.set_wrap(True)
             lbl.set_halign(Gtk.Align.START)
             lbl.set_xalign(0)

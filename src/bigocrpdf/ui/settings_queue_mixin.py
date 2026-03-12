@@ -293,7 +293,8 @@ class SettingsQueueMixin:
 
         if info_parts:
             info_label = Gtk.Label()
-            info_label.set_markup(f"<small>{' · '.join(info_parts)}</small>")
+            escaped_info = GLib.markup_escape_text(" · ".join(info_parts), -1)
+            info_label.set_markup(f"<small>{escaped_info}</small>")
             info_label.add_css_class("dim-label")
             box.append(info_label)
 
@@ -948,7 +949,8 @@ class SettingsQueueMixin:
         pages = get_pdf_page_count(file_path)
         if pages > 0:
             page_label = Gtk.Label()
-            page_label.set_markup(f"<small>{_('{pages} pg.').format(pages=pages)}</small>")
+            page_text = _("{pages} pg.").format(pages=pages)
+            page_label.set_markup(f"<small>{GLib.markup_escape_text(page_text, -1)}</small>")
             row.add_suffix(page_label)
 
     def _on_drop(self, drop_target: Gtk.DropTarget, value, _x: float, _y: float) -> bool:

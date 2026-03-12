@@ -6,6 +6,7 @@ overlaying OCR text on pages, and converting to PDF/A.
 """
 
 import logging
+import os
 from pathlib import Path
 
 import pikepdf
@@ -530,6 +531,34 @@ def smart_merge_pdfs(
     logger.info(f"Smart merged PDF saved: {output_pdf_path}")
 
 
+def _find_srgb_icc() -> Path | None:
+    """Locate the sRGB ICC profile on the current system.
+
+    Searches standard system locations and XDG_DATA_DIRS, which in an
+    AppImage environment includes ``$APPDIR/usr/share`` via the AppRun
+    script.  Returns ``None`` if no candidate file is found.
+    """
+    relative_paths = [
+        "color/icc/colord/sRGB.icc",
+        "ghostscript/iccprofiles/srgb.icc",
+    ]
+    data_dirs = [
+        d for d in os.environ.get("XDG_DATA_DIRS", "").split(":") if d
+    ]
+    # Prepend well-known absolute paths so they are checked first.
+    search_roots = ["/usr/share", "/usr/local/share"] + data_dirs
+    seen: set[str] = set()
+    for root in search_roots:
+        if root in seen:
+            continue
+        seen.add(root)
+        for rel in relative_paths:
+            candidate = Path(root) / rel
+            if candidate.exists():
+                return candidate
+    return None
+
+
 def convert_to_pdfa(input_pdf: Path, output_pdf: Path) -> None:
     """Convert PDF to PDF/A-2b format using pikepdf metadata injection.
 
@@ -551,12 +580,8 @@ def convert_to_pdfa(input_pdf: Path, output_pdf: Path) -> None:
 
     logger.info("Converting to PDF/A-2b using pikepdf metadata injection...")
 
-    srgb_icc = Path("/usr/share/color/icc/colord/sRGB.icc")
-    if not srgb_icc.exists():
-        # Fallback to Ghostscript location
-        srgb_icc = Path("/usr/share/ghostscript/iccprofiles/srgb.icc")
-
-    if not srgb_icc.exists():
+    srgb_icc = _find_srgb_icc()
+    if srgb_icc is None:
         logger.warning("sRGB ICC profile not found, skipping PDF/A conversion")
         shutil.copy2(input_pdf, output_pdf)
         return

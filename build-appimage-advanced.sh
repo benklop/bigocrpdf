@@ -192,6 +192,7 @@ bundle_system_libs() {
     info "Bundling system libraries..."
     
     mkdir -p "$APPDIR/usr/lib"
+    mkdir -p "$APPDIR/usr/lib/girepository-1.0"
     mkdir -p "$APPDIR/usr/share/glib-2.0/schemas"
     
     _copy_library_by_name() {
@@ -223,11 +224,51 @@ bundle_system_libs() {
         return $copied
     }
 
+    _copy_typelib_by_name() {
+        local typelib_name="$1"
+        local typelib_path
+        local search_roots=()
+        local pkg_typelib_dir
+
+        pkg_typelib_dir=$(pkg-config --variable=typelibdir gobject-introspection-1.0 2>/dev/null || true)
+        if [ -n "$pkg_typelib_dir" ] && [ -d "$pkg_typelib_dir" ]; then
+            search_roots+=("$pkg_typelib_dir")
+        fi
+
+        pkg_typelib_dir=$(pkg-config --variable=typelibdir girepository-2.0 2>/dev/null || true)
+        if [ -n "$pkg_typelib_dir" ] && [ -d "$pkg_typelib_dir" ]; then
+            search_roots+=("$pkg_typelib_dir")
+        fi
+
+        if [ -d "/usr/lib/girepository-1.0" ]; then
+            search_roots+=("/usr/lib/girepository-1.0")
+        fi
+        if [ -d "/usr/lib64/girepository-1.0" ]; then
+            search_roots+=("/usr/lib64/girepository-1.0")
+        fi
+
+        typelib_path=$(find "${search_roots[@]}" -maxdepth 1 -type f -name "$typelib_name" 2>/dev/null | head -n1)
+
+        if [ -z "$typelib_path" ] || [ ! -f "$typelib_path" ]; then
+            typelib_path=$(find /usr/lib /usr/lib64 -type f -path "*/girepository-1.0/$typelib_name" 2>/dev/null | head -n1)
+        fi
+
+        if [ -z "$typelib_path" ] || [ ! -f "$typelib_path" ]; then
+            warn "  Typelib $typelib_name not found on system"
+            return 1
+        fi
+
+        info "  Copying $typelib_name..."
+        cp -L "$typelib_path" "$APPDIR/usr/lib/girepository-1.0/" 2>/dev/null || warn "  Could not copy $typelib_name"
+        return 0
+    }
+
     # Keep this list intentionally narrow: only UI stack libs that are commonly
     # missing on older systems and required for startup.
     LIBS=(
         "libgtk-4.so.1"
         "libadwaita-1.so.0"
+        "libbz2.so.1.0"
         "libgstreamer-1.0.so.0"
         "libgstbase-1.0.so.0"
         "libgstvideo-1.0.so.0"
@@ -245,6 +286,7 @@ bundle_system_libs() {
         "libgmodule-2.0.so.0"
         "libgraphene-1.0.so.0"
         "libharfbuzz.so.0"
+        "libharfbuzz-subset.so.0"
         "libfreetype.so.6"
         "libfontconfig.so.1"
         "libfribidi.so.0"
@@ -266,6 +308,26 @@ bundle_system_libs() {
     _copy_library_by_name "libjbig.so.0" || true
     _copy_library_by_name "libopenjp2.so.7" || true
     _copy_library_by_name "liblcms2.so.2" || true
+
+    # Bundle typelibs that must match the bundled GTK/Adwaita libraries.
+    TYPELIBS=(
+        "Adw-1.typelib"
+        "Gtk-4.0.typelib"
+        "Gdk-4.0.typelib"
+        "Gsk-4.0.typelib"
+        "Gio-2.0.typelib"
+        "GLib-2.0.typelib"
+        "GObject-2.0.typelib"
+        "GModule-2.0.typelib"
+        "GdkPixbuf-2.0.typelib"
+        "Pango-1.0.typelib"
+        "PangoCairo-1.0.typelib"
+        "Graphene-1.0.typelib"
+    )
+
+    for typelib in "${TYPELIBS[@]}"; do
+        _copy_typelib_by_name "$typelib" || true
+    done
     
     # Copy GSettings schemas if available
     if [ -d "/usr/share/glib-2.0/schemas" ]; then
@@ -275,8 +337,8 @@ bundle_system_libs() {
             glib-compile-schemas "$APPDIR/usr/share/glib-2.0/schemas/" 2>/dev/null || warn "Could not compile GSettings schemas"
         fi
     fi
-    
-    info "System libraries bundled (targeted set only)"
+
+    info "System libraries and typelibs bundled (targeted set only)"
 }
 
 # Create custom AppRun
@@ -295,20 +357,75 @@ APPDIR="$(dirname "$(readlink -f "$0")")"
 export PYTHONHOME="$APPDIR/opt/python3.11"
 export PYTHONPATH="$APPDIR/opt/python3.11/lib/python3.11/site-packages"
 export PATH="$APPDIR/opt/python3.11/bin:$PATH"
-export LD_LIBRARY_PATH="$APPDIR/usr/lib:$APPDIR/opt/python3.11/lib:$LD_LIBRARY_PATH"
+if [ -n "${LD_LIBRARY_PATH:-}" ]; then
+    export LD_LIBRARY_PATH="$APPDIR/usr/lib:$APPDIR/opt/python3.11/lib:$LD_LIBRARY_PATH"
+else
+    export LD_LIBRARY_PATH="$APPDIR/usr/lib:$APPDIR/opt/python3.11/lib"
+fi
+if [ -n "${GI_TYPELIB_PATH:-}" ]; then
+    export GI_TYPELIB_PATH="$APPDIR/usr/lib/girepository-1.0:$GI_TYPELIB_PATH"
+else
+    export GI_TYPELIB_PATH="$APPDIR/usr/lib/girepository-1.0"
+fi
 
 # XDG directories
 export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 
 # GTK/GDK settings
-export GSETTINGS_SCHEMA_DIR="$APPDIR/usr/share/glib-2.0/schemas:${GSETTINGS_SCHEMA_DIR}"
+if [ -n "${GSETTINGS_SCHEMA_DIR:-}" ]; then
+    export GSETTINGS_SCHEMA_DIR="$APPDIR/usr/share/glib-2.0/schemas:$GSETTINGS_SCHEMA_DIR"
+else
+    export GSETTINGS_SCHEMA_DIR="$APPDIR/usr/share/glib-2.0/schemas"
+fi
 
 # ONNX Runtime settings (reduce logging)
 export ORT_LOGGING_LEVEL=3
 
 # OpenVINO settings
 export OPENVINO_DIR="$APPDIR/opt/python3.11"
+
+# Optional diagnostics to troubleshoot GI symbol/type mismatches in the field.
+if [ "${BIGOCRPDF_DEBUG_GI:-0}" = "1" ]; then
+    echo "[GI-DEBUG] APPDIR=$APPDIR" >&2
+    echo "[GI-DEBUG] LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >&2
+    echo "[GI-DEBUG] GI_TYPELIB_PATH=$GI_TYPELIB_PATH" >&2
+    echo "[GI-DEBUG] GSETTINGS_SCHEMA_DIR=$GSETTINGS_SCHEMA_DIR" >&2
+
+    if [ -f "$APPDIR/usr/lib/libadwaita-1.so.0" ]; then
+        if command -v nm >/dev/null 2>&1; then
+            if nm -D "$APPDIR/usr/lib/libadwaita-1.so.0" 2>/dev/null | grep -q 'adw_view_stack_set_transition_duration'; then
+                echo "[GI-DEBUG] Symbol found in bundled libadwaita-1.so.0" >&2
+            else
+                echo "[GI-DEBUG] Symbol NOT found in bundled libadwaita-1.so.0" >&2
+            fi
+        fi
+    else
+        echo "[GI-DEBUG] Bundled libadwaita-1.so.0 not present" >&2
+    fi
+
+    if [ -f "$APPDIR/usr/lib/girepository-1.0/Adw-1.typelib" ]; then
+        echo "[GI-DEBUG] Bundled Adw-1.typelib present" >&2
+    else
+        echo "[GI-DEBUG] Bundled Adw-1.typelib missing" >&2
+    fi
+
+    "$APPDIR/opt/python3.11/bin/python3.11" - <<'PY' 2>&1 | sed 's/^/[GI-DEBUG] /' >&2
+import gi
+gi.require_version("GIRepository", "3.0")
+from gi.repository import GIRepository
+
+repo = GIRepository.Repository.dup_default()
+repo.require("Adw", "1", 0)
+print("Adw typelib:", repo.get_typelib_path("Adw"))
+if hasattr(repo, "get_shared_libraries"):
+    print("Adw shared libs:", repo.get_shared_libraries("Adw"))
+elif hasattr(repo, "get_shared_library"):
+    print("Adw shared libs:", repo.get_shared_library("Adw"))
+else:
+    print("Adw shared libs: <unavailable>")
+PY
+fi
 
 # RapidOCR model handling - use unionfs-fuse to overlay writable on read-only
 RAPIDOCR_CACHE="$XDG_CACHE_HOME/bigocrpdf/rapidocr"
@@ -482,6 +599,7 @@ build_appimage() {
         
         # Copy to dist
         mkdir -p "$SCRIPT_DIR/dist"
+        rm -f "$SCRIPT_DIR/dist/BigOcrPDF-${APP_VERSION}-x86_64.AppImage"
         cp "BigOcrPDF-${APP_VERSION}-x86_64.AppImage" "$SCRIPT_DIR/dist/"
         
         # Get file size

@@ -153,12 +153,14 @@ class TextViewerDialogMixin:
 
         word_count = len(extracted_text.split())
         char_count = len(extracted_text)
+        words_label = GLib.markup_escape_text(_("words"), -1)
+        chars_label = GLib.markup_escape_text(_("characters"), -1)
         subtitle_label = Gtk.Label()
         subtitle_label.set_markup(
             f"<small>{word_count:,} "
-            + _("words")
+            + words_label
             + f" · {char_count:,} "
-            + _("characters")
+            + chars_label
             + "</small>"
         )
         subtitle_label.add_css_class("dim-label")

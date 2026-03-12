@@ -48,6 +48,10 @@ try:
         os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "locale"),
         "/usr/share/biglinux/bigocrpdf/locale",
     ]
+    # In AppImage, APPDIR/usr/share/locale takes precedence over system paths
+    appdir = os.environ.get("APPDIR")
+    if appdir:
+        locale_dirs.insert(0, os.path.join(appdir, "usr", "share", "locale"))
 
     for locale_dir in locale_dirs:
         if os.path.exists(locale_dir):

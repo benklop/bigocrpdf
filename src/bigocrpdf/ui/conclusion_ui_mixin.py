@@ -9,6 +9,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk
+from gi.repository import GLib
 
 if TYPE_CHECKING:
     from bigocrpdf.window import BigOcrPdfWindow
@@ -304,12 +305,14 @@ class ConclusionStatsFileListMixin:
         """
         # Add page count
         page_label = Gtk.Label()
-        page_label.set_markup(f"<small>{_('{pages} pg.').format(pages=pages)}</small>")
+        page_text = _("{pages} pg.").format(pages=pages)
+        page_label.set_markup(f"<small>{GLib.markup_escape_text(page_text, -1)}</small>")
         row.add_suffix(page_label)
 
         # Add size label
         size_label = Gtk.Label()
-        size_label.set_markup(f"<small>{format_file_size(file_size)}</small>")
+        size_text = GLib.markup_escape_text(format_file_size(file_size), -1)
+        size_label.set_markup(f"<small>{size_text}</small>")
         row.add_suffix(size_label)
 
         # Add size change indicator with theme-aware CSS classes
@@ -317,7 +320,8 @@ class ConclusionStatsFileListMixin:
             change_pct = comparison.size_change_percent
             sign = "+" if change_pct >= 0 else ""
             change_label = Gtk.Label()
-            change_label.set_markup(f"<small>({sign}{change_pct:.0f}%)</small>")
+            change_text = GLib.markup_escape_text(f"({sign}{change_pct:.0f}%)", -1)
+            change_label.set_markup(f"<small>{change_text}</small>")
             change_label.add_css_class("caption")
             if change_pct < 0:
                 change_label.add_css_class("success")

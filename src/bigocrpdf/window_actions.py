@@ -349,14 +349,15 @@ class WindowActionsSignalsMixin:
         content_box.append(icon)
 
         what_is = Gtk.Label()
-        what_is.set_markup(f"<span size='large' weight='bold'>{_('What is')} Big OCR PDF?</span>")
+        what_is_title = GLib.markup_escape_text(_("What is"), -1)
+        what_is.set_markup(f"<span size='large' weight='bold'>{what_is_title} Big OCR PDF?</span>")
         what_is.set_halign(Gtk.Align.CENTER)
         what_is.set_margin_bottom(14)
         set_a11y_label(what_is, f"{_('What is')} Big OCR PDF?")
         content_box.append(what_is)
 
         what_is_desc = Gtk.Label()
-        what_is_desc.set_markup(
+        what_is_desc.set_text(
             _(
                 "Big OCR PDF adds optical character recognition to your PDF files, "
                 "making them searchable and allowing you to select and copy text "
@@ -371,8 +372,9 @@ class WindowActionsSignalsMixin:
         content_box.append(what_is_desc)
 
         benefits = Gtk.Label()
+        benefits_text = GLib.markup_escape_text(_("Benefits of using Big OCR PDF:"), -1)
         benefits.set_markup(
-            "<span weight='bold'>" + _("Benefits of using Big OCR PDF:") + "</span>"
+            "<span weight='bold'>" + benefits_text + "</span>"
         )
         benefits.set_halign(Gtk.Align.START)
         benefits.set_margin_bottom(8)
@@ -397,7 +399,11 @@ class WindowActionsSignalsMixin:
 
         for title, description in benefit_items:
             benefit_label = Gtk.Label()
-            benefit_label.set_markup(f"<span>• <b>{title}:</b> {description}</span>")
+            escaped_title = GLib.markup_escape_text(title, -1)
+            escaped_description = GLib.markup_escape_text(description, -1)
+            benefit_label.set_markup(
+                f"<span>• <b>{escaped_title}:</b> {escaped_description}</span>"
+            )
             benefit_label.set_wrap(True)
             benefit_label.set_halign(Gtk.Align.START)
             benefit_label.set_xalign(0)

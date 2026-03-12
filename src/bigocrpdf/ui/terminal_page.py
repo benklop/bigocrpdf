@@ -98,7 +98,8 @@ class TerminalPageManager:
     def _add_progress_label(self, container: Gtk.Box) -> None:
         """Add the main progress label"""
         current_file_label = Gtk.Label()
-        current_file_label.set_markup("<big>" + _("Processing PDF files...") + "</big>")
+        escaped_label = GLib.markup_escape_text(_("Processing PDF files..."), -1)
+        current_file_label.set_markup("<big>" + escaped_label + "</big>")
         current_file_label.set_halign(Gtk.Align.CENTER)
         current_file_label.set_margin_bottom(24)
         container.append(current_file_label)
@@ -400,9 +401,10 @@ class TerminalPageManager:
 
     def _show_completion_status(self, total_files: int, time_str: str) -> None:
         """Show completion status"""
+        escaped_time = GLib.markup_escape_text(str(time_str), -1)
         status_text = _(
             "<b>OCR processing complete!</b> {total} file(s) processed • Total time: {time}"
-        ).format(total=total_files, time=time_str)
+        ).format(total=total_files, time=escaped_time)
 
         if self._progress_state.update_status(status_text):
             self.terminal_status_bar.set_markup(status_text)
@@ -419,6 +421,10 @@ class TerminalPageManager:
         total_files = current_file_info.get("total_files", 1)
         status_message = current_file_info.get("status_message", "")
 
+        escaped_filename = GLib.markup_escape_text(str(filename), -1)
+        escaped_status = GLib.markup_escape_text(str(status_message), -1)
+        escaped_time = GLib.markup_escape_text(str(time_str), -1)
+
         # Build status text
         if status_message:
             status_text = _(
@@ -426,9 +432,9 @@ class TerminalPageManager:
             ).format(
                 current=file_number,
                 total=total_files,
-                filename=filename,
-                status=status_message,
-                time=time_str,
+                filename=escaped_filename,
+                status=escaped_status,
+                time=escaped_time,
             )
         else:
             status_text = _(
@@ -436,8 +442,8 @@ class TerminalPageManager:
             ).format(
                 current=file_number,
                 total=total_files,
-                filename=filename,
-                time=time_str,
+                filename=escaped_filename,
+                time=escaped_time,
             )
 
         if self._progress_state.update_status(status_text):
@@ -457,7 +463,7 @@ class TerminalPageManager:
         )
 
         if self._progress_state.update_status(status_text):
-            self.terminal_status_bar.set_markup(status_text)
+            self.terminal_status_bar.set_text(status_text)
 
     def _show_initial_status(self, total_files: int, time_str: str) -> None:
         """Show initial processing status"""
@@ -466,7 +472,7 @@ class TerminalPageManager:
         )
 
         if self._progress_state.update_status(status_text):
-            self.terminal_status_bar.set_markup(status_text)
+            self.terminal_status_bar.set_text(status_text)
 
     def show_completion_ui(self) -> None:
         """Update UI to show processing completion"""
